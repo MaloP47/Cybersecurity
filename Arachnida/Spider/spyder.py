@@ -41,17 +41,20 @@ def download_image(url, save_path):
         return False
 
 
-def extract_images_from_page(
-    url, save_path, visited_urls=None, depth=0, max_depth=5
-):
+def extract_images_from_page(url, save_path, visited_urls=None, depth=0,
+                             max_depth=None):
     """Extract and download images from a webpage recursively."""
     if visited_urls is None:
         visited_urls = set()
 
-    if depth > max_depth or url in visited_urls:
+    if url in visited_urls:
+        return
+
+    if max_depth is not None and depth > max_depth:
         return
 
     visited_urls.add(url)
+    print(f"\033[32mVisiting: {url}\033[0m")  # Print URL in green
 
     try:
         response = requests.get(url)
@@ -67,8 +70,8 @@ def extract_images_from_page(
                 if is_valid_image_url(img_url):
                     download_image(img_url, save_path)
 
-        # If recursive mode is enabled, follow links
-        if depth < max_depth:
+        # Only follow links if we haven't reached max depth
+        if max_depth is None or depth < max_depth:
             for link in soup.find_all('a'):
                 href = link.get('href')
                 if href:
@@ -98,7 +101,7 @@ def main():
         metavar='[N]', help='recursive depth'
     )
     parser.add_argument(
-        '-p', type=str, default='../img/tesing',
+        '-p', type=str, default='./data/',
         metavar='[PATH]', help='save path'
     )
     parser.add_argument('URL', type=str, help='Url to scrape')
@@ -111,7 +114,9 @@ def main():
 
     try:
         if args.r:
-            extract_images_from_page(args.URL, args.p, max_depth=args.l)
+            # If -l is specified, use that value, otherwise use default 5
+            max_depth = args.l if args.l != 5 else 5
+            extract_images_from_page(args.URL, args.p, max_depth=max_depth)
         else:
             # Single page mode
             extract_images_from_page(args.URL, args.p, max_depth=0)

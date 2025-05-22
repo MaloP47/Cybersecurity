@@ -169,3 +169,5 @@ venv/
 ENV/
 
 img/testing/*
+
+Arachnida/Spider/data
