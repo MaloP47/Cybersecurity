@@ -8,24 +8,26 @@ from urllib.parse import urljoin, urlparse
 def is_valid_image_url(url):
     """Check if the URL points to an image with valid extension."""
     valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp']
-    return any(url.lower().endswith(ext) 
-              for ext in valid_extensions)
+    return any(
+        url.lower().endswith(ext)
+        for ext in valid_extensions
+    )
 
 
 def download_image(url, save_path):
-    """Download an image from the given URL and save it to the specified path."""
+    """Download an image from the URL and save it to the specified path."""
     try:
         response = requests.get(url, stream=True)
         response.raise_for_status()
-        
+
         # Get filename from URL
         filename = os.path.basename(urlparse(url).path)
         if not filename:
             filename = 'image_' + str(hash(url)) + '.jpg'
-        
+
         # Create save path if it doesn't exist
         os.makedirs(save_path, exist_ok=True)
-        
+
         # Save the image
         file_path = os.path.join(save_path, filename)
         with open(file_path, 'wb') as f:
@@ -39,21 +41,23 @@ def download_image(url, save_path):
         return False
 
 
-def extract_images_from_page(url, save_path, visited_urls=None, depth=0, max_depth=5):
+def extract_images_from_page(
+    url, save_path, visited_urls=None, depth=0, max_depth=5
+):
     """Extract and download images from a webpage recursively."""
     if visited_urls is None:
         visited_urls = set()
-    
+
     if depth > max_depth or url in visited_urls:
         return
-    
+
     visited_urls.add(url)
-    
+
     try:
         response = requests.get(url)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
-        
+
         # Find all image tags
         for img in soup.find_all('img'):
             img_url = img.get('src')
@@ -62,7 +66,7 @@ def extract_images_from_page(url, save_path, visited_urls=None, depth=0, max_dep
                 img_url = urljoin(url, img_url)
                 if is_valid_image_url(img_url):
                     download_image(img_url, save_path)
-        
+
         # If recursive mode is enabled, follow links
         if depth < max_depth:
             for link in soup.find_all('a'):
@@ -70,32 +74,31 @@ def extract_images_from_page(url, save_path, visited_urls=None, depth=0, max_dep
                 if href:
                     next_url = urljoin(url, href)
                     # Only follow links from the same domain
-                    if (urlparse(next_url).netloc == 
-                            urlparse(url).netloc):
+                    if (urlparse(next_url).netloc == urlparse(url).netloc):
                         extract_images_from_page(
-                            next_url, save_path, visited_urls, 
+                            next_url, save_path, visited_urls,
                             depth + 1, max_depth
                         )
-    
+
     except Exception as e:
         print(f"Error processing {url}: {e}")
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Image Scraper', 
+        description='Image Scraper',
         usage='./spider [-rlp] URL'
     )
     parser.add_argument(
-        '-r', action="store_true", 
+        '-r', action="store_true",
         help="recursively download images"
     )
     parser.add_argument(
-        '-l', type=int, default=5, 
+        '-l', type=int, default=5,
         metavar='[N]', help='recursive depth'
     )
     parser.add_argument(
-        '-p', type=str, default='../img/tesing', 
+        '-p', type=str, default='../img/tesing',
         metavar='[PATH]', help='save path'
     )
     parser.add_argument('URL', type=str, help='Url to scrape')
@@ -105,7 +108,7 @@ def main():
     # Only check for -l if it was explicitly set by the user
     if args.l != 5 and not args.r:
         parser.error('Use -l with -r')
-    
+
     try:
         if args.r:
             extract_images_from_page(args.URL, args.p, max_depth=args.l)
