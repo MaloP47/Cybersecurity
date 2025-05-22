@@ -162,3 +162,8 @@ cython_debug/
 #.idea/
 
 .vscode
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
